@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.tgbot.summary.plist
+  launchd 등록 방법:
+    1. 이 파일을 ~/Library/LaunchAgents/ 에 복사
+    2. 경로 수정: PYTHON_PATH, BOT_DIR 을 실제 경로로 변경
+    3. launchctl load ~/Library/LaunchAgents/com.tgbot.summary.plist
+    4. 상태 확인: launchctl list | grep tgbot
+
+  수동 실행:
+    launchctl start com.tgbot.summary
+
+  등록 해제:
+    launchctl unload ~/Library/LaunchAgents/com.tgbot.summary.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.tgbot.summary</string>
+
+  <!-- 실행 명령 -->
+  <key>ProgramArguments</key>
+  <array>
+    <!-- python 경로: which python3 으로 확인 후 수정 -->
+    <string>/usr/local/bin/python3</string>
+    <!-- 봇 디렉토리의 main.py 절대 경로 -->
+    <string>/Users/YOUR_USERNAME/tg_summary_bot/main.py</string>
+    <string>--config</string>
+    <string>/Users/YOUR_USERNAME/tg_summary_bot/config.yaml</string>
+  </array>
+
+  <!-- 3일 = 259200초 마다 실행 -->
+  <key>StartInterval</key>
+  <integer>259200</integer>
+
+  <!-- 맥북이 꺼져있다가 켜졌을 때 실행 시간이 지났으면 즉시 실행 -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <!-- 표준 출력 로그 -->
+  <key>StandardOutPath</key>
+  <string>/Users/YOUR_USERNAME/Library/Logs/tgbot_stdout.log</string>
+
+  <!-- 에러 로그 -->
+  <key>StandardErrorPath</key>
+  <string>/Users/YOUR_USERNAME/Library/Logs/tgbot_stderr.log</string>
+
+  <!-- 환경변수 (필요 시 추가) -->
+  <!-- <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin</string>
+  </dict> -->
+
+  <!-- 실패 시 재시도하지 않음 (다음 주기에 자연히 다시 실행됨) -->
+  <key>ThrottleInterval</key>
+  <integer>60</integer>
+</dict>
+</plist>

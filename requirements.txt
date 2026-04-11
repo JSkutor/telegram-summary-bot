@@ -1,0 +1,3 @@
+telethon>=1.36
+google-generativeai>=0.8
+pyyaml>=6.0
