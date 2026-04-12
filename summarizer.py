@@ -60,8 +60,7 @@ period: "{date_from.strftime("%Y-%m-%d")} ~ {date_to.strftime("%Y-%m-%d")}"
 sources:
 {channels_yaml}
 tags:
-  - digest
-  - auto-generated
+  - briefings
 ---
 
 """

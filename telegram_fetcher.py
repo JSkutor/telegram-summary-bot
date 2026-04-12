@@ -5,7 +5,7 @@ telegram_fetcher.py
 
 import logging
 from datetime import datetime, timezone
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from telethon import TelegramClient
 from telethon.tl.types import Message
@@ -19,6 +19,7 @@ class ChannelMessage:
     date: datetime
     text: str
     url: str | None = None
+    reactions: dict[str, int] = field(default_factory=dict)  # {"👍": 32, "🔥": 18}
 
 
 async def fetch_messages(
@@ -85,12 +86,24 @@ async def _fetch_channel(
         except Exception:
             url = None
 
+        # 반응(이모지) 수집
+        reactions: dict[str, int] = {}
+        try:
+            if msg.reactions and msg.reactions.results:
+                for r in msg.reactions.results:
+                    emoticon = getattr(r.reaction, "emoticon", None)
+                    if emoticon:
+                        reactions[emoticon] = r.count
+        except Exception:
+            pass
+
         results.append(
             ChannelMessage(
                 channel=getattr(entity, "title", channel),
                 date=msg_date,
                 text=text,
                 url=url,
+                reactions=reactions,
             )
         )
 
@@ -112,6 +125,15 @@ def format_messages_for_prompt(messages: list[ChannelMessage]) -> str:
 
         date_str = msg.date.strftime("%Y-%m-%d %H:%M")
         link_str = f" [{msg.url}]" if msg.url else ""
-        lines.append(f"[{date_str}]{link_str}\n{msg.text}\n")
+
+        # 반응 있으면 이모지+숫자 형태로 포함 (예: 👍32 🔥18)
+        reaction_str = ""
+        if msg.reactions:
+            reaction_str = " " + " ".join(
+                f"{emoji}{count}"
+                for emoji, count in sorted(msg.reactions.items(), key=lambda x: -x[1])
+            )
+
+        lines.append(f"[{date_str}]{link_str}{reaction_str}\n{msg.text}\n")
 
     return "\n".join(lines)

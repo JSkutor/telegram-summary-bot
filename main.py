@@ -19,6 +19,7 @@ from pathlib import Path
 
 import yaml
 
+
 # ── 의존성 체크를 여기서 해서 에러 메시지를 친절하게 ──────────────────────
 def _check_dependencies():
     missing = []
@@ -33,6 +34,7 @@ def _check_dependencies():
     if missing:
         print(f"[오류] 패키지 설치 필요: pip install {' '.join(missing)}")
         sys.exit(1)
+
 
 _check_dependencies()
 
@@ -103,6 +105,12 @@ async def run(config: dict, dry_run: bool = False):
         print(messages_text[:2000])
         print("... (dry-run 모드: 요약 및 파일 저장 생략)")
         return
+    # if dry_run:
+    #     for m in messages[:7]:
+    #         print(f"reactions raw: {m.reactions}")
+    #     print(messages_text[:6000])
+    #     print("... (dry-run 모드: 요약 및 파일 저장 생략)")
+    #     return
 
     # 2. Gemini 요약
     summary_raw = summarize(
@@ -127,7 +135,7 @@ async def run(config: dict, dry_run: bool = False):
     saved_path = write_to_obsidian(
         content=md_content,
         vault_path=out_cfg["obsidian_vault_path"],
-        target_folder=out_cfg.get("target_folder", "News Digest"),
+        target_folder=out_cfg.get("target_folder", "Briefings"),
         filename_format=out_cfg.get("filename_format", "digest_%Y-%m-%d.md"),
         reference_date=datetime.now(),
     )

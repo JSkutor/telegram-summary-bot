@@ -1,6 +1,6 @@
-# .gitignore
 config.yaml
-*.session        # 텔레그램 인증 세션 파일
+*.session
+venv/
 __pycache__/
 *.pyc
 .env
