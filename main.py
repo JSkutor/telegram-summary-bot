@@ -28,9 +28,9 @@ def _check_dependencies():
     except ImportError:
         missing.append("telethon")
     try:
-        import google.generativeai  # noqa: F401
+        import google.genai  # noqa: F401
     except ImportError:
-        missing.append("google-generativeai")
+        missing.append("google-genai")
     if missing:
         print(f"[오류] 패키지 설치 필요: pip install {' '.join(missing)}")
         sys.exit(1)

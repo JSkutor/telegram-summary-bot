@@ -25,7 +25,7 @@
   <array>
     <!-- python 경로: which python3 으로 확인 후 수정 -->
     <!-- <string>/usr/local/bin/python3</string> -->
-    <string>/opt/homebrew/bin/python3</string>
+  <string>/Users/kutor/Documents/Projects_Kutor/tg_summary_bot/venv/bin/python3</string>
     <!-- 봇 디렉토리의 main.py 절대 경로 -->
     <string>/Users/kutor/Documents/Projects_Kutor/tg_summary_bot/main.py</string>
     <string>--config</string>
@@ -42,11 +42,11 @@
 
   <!-- 표준 출력 로그 -->
   <key>StandardOutPath</key>
-  <string>/Users/YOUR_USERNAME/Library/Logs/tgbot_stdout.log</string>
+  <string>/Users/kutor/Library/Logs/tgbot_stdout.log</string>
 
   <!-- 에러 로그 -->
   <key>StandardErrorPath</key>
-  <string>/Users/YOUR_USERNAME/Library/Logs/tgbot_stderr.log</string>
+  <string>/Users/kutor/Library/Logs/tgbot_stderr.log</string>
 
   <!-- 환경변수 (필요 시 추가) -->
   <!-- <key>EnvironmentVariables</key>
