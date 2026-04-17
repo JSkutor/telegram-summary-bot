@@ -74,73 +74,77 @@ def load_config(config_path: str) -> dict:
 async def run(config: dict, dry_run: bool = False):
     logger = logging.getLogger("main")
 
-    tg_cfg = config["telegram"]
-    gem_cfg = config["gemini"]
-    out_cfg = config["output"]
+    try:
+        tg_cfg = config["telegram"]
+        gem_cfg = config["gemini"]
+        out_cfg = config["output"]
 
-    # 기간 계산
-    now = datetime.now(tz=timezone.utc)
-    fetch_days = int(tg_cfg.get("fetch_days", 3))
-    date_from = now - timedelta(days=fetch_days)
+        # 기간 계산
+        now = datetime.now(tz=timezone.utc)
+        fetch_days = int(tg_cfg.get("fetch_days", 3))
+        date_from = now - timedelta(days=fetch_days)
 
-    logger.info(f"수집 기간: {date_from.strftime('%Y-%m-%d %H:%M')} UTC ~ 현재")
+        logger.info(f"수집 기간: {date_from.strftime('%Y-%m-%d %H:%M')} UTC ~ 현재")
 
-    # 1. 텔레그램 메시지 수집
-    messages = await fetch_messages(
-        api_id=int(tg_cfg["api_id"]),
-        api_secret=tg_cfg["api_secret"],
-        session_name=tg_cfg.get("session_name", "tg_summary_session"),
-        channels=tg_cfg["channels"],
-        since=date_from,
-    )
+        # 1. 텔레그램 메시지 수집
+        messages = await fetch_messages(
+            api_id=int(tg_cfg["api_id"]),
+            api_secret=tg_cfg["api_secret"],
+            session_name=tg_cfg.get("session_name", "tg_summary_session"),
+            channels=tg_cfg["channels"],
+            since=date_from,
+        )
 
-    if not messages:
-        logger.warning("수집된 메시지가 없습니다. 종료합니다.")
-        return
+        if not messages:
+            logger.warning("수집된 메시지가 없습니다. 종료합니다.")
+            return
 
-    messages_text = format_messages_for_prompt(messages)
+        messages_text = format_messages_for_prompt(messages)
 
-    if dry_run:
-        logger.info("[dry-run] 수집된 메시지 미리보기:")
-        print(messages_text[:2000])
-        print("... (dry-run 모드: 요약 및 파일 저장 생략)")
-        return
-    # if dry_run:
-    #     for m in messages[:7]:
-    #         print(f"reactions raw: {m.reactions}")
-    #     print(messages_text[:6000])
-    #     print("... (dry-run 모드: 요약 및 파일 저장 생략)")
-    #     return
+        if dry_run:
+            logger.info("[dry-run] 수집된 메시지 미리보기:")
+            print(messages_text[:2000])
+            print("... (dry-run 모드: 요약 및 파일 저장 생략)")
+            return
+        # if dry_run:
+        #     for m in messages[:7]:
+        #         print(f"reactions raw: {m.reactions}")
+        #     print(messages_text[:6000])
+        #     print("... (dry-run 모드: 요약 및 파일 저장 생략)")
+        #     return
 
-    # 2. Gemini 요약
-    summary_raw = summarize(
-        api_key=gem_cfg["api_key"],
-        model_name=gem_cfg.get("model", "gemini-2.0-flash"),
-        prompt_template=gem_cfg["prompt_template"],
-        messages_text=messages_text,
-        date_from=date_from,
-        date_to=now,
-    )
+        # 2. Gemini 요약
+        summary_raw = summarize(
+            api_key=gem_cfg["api_key"],
+            model_name=gem_cfg.get("model", "gemini-2.0-flash"),
+            prompt_template=gem_cfg["prompt_template"],
+            messages_text=messages_text,
+            date_from=date_from,
+            date_to=now,
+        )
 
-    # 3. 최종 MD 문서 구성
-    channel_names = tg_cfg["channels"]
-    md_content = build_md_document(
-        summary=summary_raw,
-        date_from=date_from,
-        date_to=now,
-        channels=channel_names,
-    )
+        # 3. 최종 MD 문서 구성
+        channel_names = tg_cfg["channels"]
+        md_content = build_md_document(
+            summary=summary_raw,
+            date_from=date_from,
+            date_to=now,
+            channels=channel_names,
+        )
 
-    # 4. Obsidian vault에 저장
-    saved_path = write_to_obsidian(
-        content=md_content,
-        vault_path=out_cfg["obsidian_vault_path"],
-        target_folder=out_cfg.get("target_folder", "Briefings"),
-        filename_format=out_cfg.get("filename_format", "digest_%Y-%m-%d.md"),
-        reference_date=datetime.now(),
-    )
+        # 4. Obsidian vault에 저장
+        saved_path = write_to_obsidian(
+            content=md_content,
+            vault_path=out_cfg["obsidian_vault_path"],
+            target_folder=out_cfg.get("target_folder", "Briefings"),
+            filename_format=out_cfg.get("filename_format", "digest_%Y-%m-%d.md"),
+            reference_date=datetime.now(),
+        )
 
-    logger.info(f"완료! 저장 위치: {saved_path}")
+        logger.info(f"완료! 저장 위치: {saved_path}")
+    except Exception as e:
+        logger.error(f"메인 오류: {e}", exc_info=True)
+        sys.exit(1)
 
 
 # ── CLI ────────────────────────────────────────────────────────────────────
