@@ -21,22 +21,27 @@ cp config.yaml config.yaml  # 이미 있음
 ## 설정 (config.yaml)
 
 ### Telegram API 키 발급
+
 1. https://my.telegram.org 접속 → Log in
 2. API development tools → 앱 생성
 3. `api_id`, `api_hash` 복사 → config.yaml에 입력
 
 ### Gemini API 키 발급
+
 1. https://aistudio.google.com 접속
 2. "Get API key" → 키 생성
 3. config.yaml `gemini.api_key`에 입력
 
 ### Obsidian vault 경로 확인
+
 iCloud에 Obsidian vault가 있는 경우 기본 경로:
+
 ```
 ~/Library/Mobile Documents/iCloud~md~obsidian/Documents/{vault이름}
 ```
 
 터미널에서 확인:
+
 ```bash
 ls ~/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/
 ```
@@ -77,6 +82,7 @@ launchctl list | grep tgbot
 ```
 
 ### 유용한 launchd 명령어
+
 ```bash
 # 지금 당장 실행
 launchctl start com.tgbot.summary
@@ -103,12 +109,3 @@ tg_summary_bot/
 ├── requirements.txt
 └── com.tgbot.summary.plist  # launchd 설정
 ```
-
----
-
-## 확장 아이디어
-
-- `summarizer.py`의 `prompt_template`을 바꿔 요약 스타일 변경
-- `config.yaml`에 채널 추가
-- `file_writer.py`를 수정해 Discord 웹훅으로 전송 추가
-- `main.py`에 `--since` 인자 추가로 수동 범위 지정 가능
