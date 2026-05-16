@@ -20,6 +20,25 @@ from pathlib import Path
 import yaml
 
 
+# err 에 시간 찍히게
+class TimestampedStderr:
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, msg):
+        if msg.strip():  # 빈 줄은 스킵
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self._stream.write(f"{ts} [STDERR] {msg}")
+        else:
+            self._stream.write(msg)
+
+    def flush(self):
+        self._stream.flush()
+
+
+sys.stderr = TimestampedStderr(sys.stderr)
+
+
 # ── 의존성 체크를 여기서 해서 에러 메시지를 친절하게 ──────────────────────
 def _check_dependencies():
     missing = []
