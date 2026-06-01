@@ -1,0 +1,73 @@
+# ===================================================
+# Telegram Summary Bot configuration
+# ===================================================
+
+telegram:
+  # Create these credentials at https://my.telegram.org.
+  # ${...} values are loaded from .env or shell environment variables.
+  api_id: "${TELEGRAM_API_ID}"
+  api_secret: "${TELEGRAM_API_SECRET}"
+  # Telethon session file path/name. The first run requires manual login.
+  session_name: "tg_summary_session"
+
+  # Channels to fetch. Use channel usernames or invite links.
+  channels:
+    # - "@channel_username_1"
+    # - "@channel_username_2"
+    # - "https://t.me/some_private_channel"
+
+  # Fallback fetch window in days. Used on the first run or if state is missing.
+  fetch_days: 3
+
+runtime:
+  # Real digest cadence. launchd can check more often so failed runs retry sooner.
+  digest_interval_hours: 72
+  # Leave empty to create config.state.json and config.lock next to config.yaml.
+  state_file: ""
+  lock_file: ""
+  # Fetch slightly before the last successful run to reduce the chance of gaps.
+  state_overlap_minutes: 360
+  # If false, any channel failure prevents the run from being marked successful.
+  allow_partial_channel_failures: false
+
+gemini:
+  api_key: "${GEMINI_API_KEY}"
+  model: "gemini-2.5-flash"
+  max_retries: 5
+  retry_initial_seconds: 60
+  retry_max_seconds: 900
+
+  # Summarization prompt. Edit this for your channel mix and preferred format.
+  prompt_template: |
+    Summarize the following {days} days of Telegram channel messages as concise Markdown.
+    Do not add an introduction or extra commentary. Use the structure below and focus only on the most important information.
+
+    # Channel Digest ({date_from} ~ {date_to})
+
+    ## 1. Executive Summary
+    - [Summarize the most important issues or trends in 2-3 lines.]
+
+    ## 2. Highlights by Source
+    - **[Source/channel name]**: [1-2 line summary]
+    - **[Source/channel name]**: [1-2 line summary]
+
+    ## 3. Keywords and Trends
+    - **Keywords**: [List the main keywords or topics.]
+    - **Notable trends/signals**: [Summarize notable trends, numbers, or events in 1-2 lines.]
+
+    ---
+    {messages}
+
+output:
+  # iCloud Obsidian vault path.
+  # Default macOS path: ~/Library/Mobile Documents/iCloud~md~obsidian/Documents/{vault_name}
+  obsidian_vault_path: "~/Library/Mobile Documents/iCloud~md~obsidian/Documents/{vault_name}"
+  # Folder inside the vault.
+  target_folder: "Briefings"
+  # Python strftime filename format.
+  filename_format: "briefing_%Y-%m-%d.md"
+
+logging:
+  level: "INFO"
+  # App-level log file. launchd stdout/stderr logs are configured separately.
+  file: "~/Library/Logs/tg_summary_bot.log"

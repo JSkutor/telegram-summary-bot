@@ -1,16 +1,27 @@
-# 텔레그램 AI 요약 봇
+# Telegram Summary Bot
 
-텔레그램 채널 메시지를 주기적으로 수집해 Gemini로 요약하고, Obsidian vault에 마크다운 파일로 저장하는 macOS용 봇입니다.
+Telegram channel digest bot that checks for new messages on a schedule, creates a Gemini-powered Markdown summary every 3 days, and saves the result to an Obsidian vault. It is designed for macOS automation with `launchd`, with retry and state tracking so failed API runs can be picked up later.
 
-## 특징
+## Features
 
-- Telethon으로 텔레그램 채널 메시지 수집
-- Gemini API로 브리핑 마크다운 생성
-- Obsidian vault에 파일 저장
-- macOS `launchd` 자동 실행 지원
-- API 실패 대비 재시도와 상태 파일 기반 누락 방지
+- Fetches Telegram channel messages with Telethon
+- Summarizes messages with the Gemini API
+- Saves Markdown notes into an Obsidian vault
+- Automates scheduled runs with macOS `launchd`
+- Tracks the last successful run to avoid gaps after API failures, sleep, or missed schedules
+- Keeps API keys and local runtime files out of git
 
-## 설치
+## Project Description
+
+Suggested GitHub description:
+
+```text
+Telegram channel digest bot for macOS: periodically checks channels, summarizes messages with Gemini, and saves Markdown digests to Obsidian via iCloud. Automated with launchd and resilient to missed or failed runs.
+```
+
+Why this is more accurate than “fetches messages every 3 days”: the app can wake up more frequently, such as every 6 hours, while only producing a digest when the configured digest interval has elapsed. This lets failed API runs retry sooner without changing the 3-day digest cadence.
+
+## Installation
 
 ```bash
 git clone https://github.com/JSkutor/telegram-summary-bot.git
@@ -19,13 +30,13 @@ cd telegram-summary-bot
 python3 -m venv venv
 ./venv/bin/pip install -r requirements.txt
 
-cp config.yaml.template config.yaml
+cp config.example.yaml config.yaml
 cp .env.example .env
 ```
 
-## 설정
+## Configuration
 
-민감한 API 키는 `config.yaml`에 직접 쓰지 않고 `.env`에 넣습니다.
+Put secrets in `.env`, not directly in `config.yaml`.
 
 ```dotenv
 TELEGRAM_API_ID=123456
@@ -33,7 +44,7 @@ TELEGRAM_API_SECRET=your_telegram_api_hash
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
-`config.yaml`에는 채널 목록과 Obsidian 경로를 설정합니다.
+Edit `config.yaml` for channels, Obsidian output, digest interval, and retry behavior.
 
 ```yaml
 telegram:
@@ -44,62 +55,62 @@ output:
   obsidian_vault_path: "~/Library/Mobile Documents/iCloud~md~obsidian/Documents/{vault_name}"
 ```
 
-Telegram API 키는 https://my.telegram.org 의 `API development tools`에서 발급합니다. Gemini API 키는 https://aistudio.google.com 에서 발급합니다.
+Get Telegram API credentials from https://my.telegram.org under `API development tools`. Get a Gemini API key from https://aistudio.google.com.
 
-## 첫 실행
+## First Run
 
-텔레그램은 처음 한 번 전화번호 인증이 필요합니다. 자동 실행 등록 전에 수동으로 인증하세요.
+Telethon requires one manual login before automation can work. Run this before installing the LaunchAgent:
 
 ```bash
 ./venv/bin/python main.py --dry-run
 ```
 
-인증이 끝나면 `tg_summary_session.session` 파일이 생성됩니다. 이 파일은 개인 세션이므로 GitHub에 올리면 안 됩니다.
+After login, Telethon creates a `tg_summary_session.session` file. This is a private auth session and must not be committed.
 
-## 자주 쓰는 실행 명령
+## Common Commands
 
 ```bash
-# 메시지 수집만 테스트
+# Test message fetching only
 ./venv/bin/python main.py --dry-run
 
-# 실행 주기가 되었을 때만 요약
+# Run only if the digest interval has elapsed
 ./venv/bin/python main.py
 
-# 실행 주기와 관계없이 바로 요약
+# Run immediately, ignoring the digest interval
 ./venv/bin/python main.py --force
 
-# plist 생성 및 launchd 등록
+# Generate and register the LaunchAgent plist
 ./venv/bin/python launchd_manager.py install
 
-# 등록 직후 바로 한 번 실행 요청
+# Register and request one immediate launchd run
 ./venv/bin/python launchd_manager.py install --run-now
 
-# launchd 상태 확인
+# Check launchd status
 ./venv/bin/python launchd_manager.py status
 
-# launchd 등록 해제
+# Unregister the LaunchAgent
 ./venv/bin/python launchd_manager.py uninstall
 ```
 
-## 자동 실행
+## launchd Automation
 
-`launchd_manager.py`가 현재 프로젝트 경로, venv 파이썬, 로그 경로를 반영한 plist를 생성하고 등록합니다.
+`launchd_manager.py` generates the plist from the current project path, Python virtualenv path, config path, and log path. You do not need to keep a plist template in the repository.
 
 ```bash
 ./venv/bin/python launchd_manager.py install
 ```
 
-기본값은 6시간마다 앱을 깨우는 것입니다. 앱은 내부 상태를 보고 실제 요약 주기인 72시간이 지나지 않았으면 바로 종료합니다. 즉, API 실패가 나도 다음 정규 3일을 기다리지 않고 6시간 뒤 다시 시도합니다.
+By default, launchd wakes the app every 6 hours. The app then checks its own state and exits immediately if the real digest interval, default 72 hours, has not elapsed. If an API call fails, the next 6-hour launchd check can retry instead of waiting another 3 days.
 
 ```bash
-# launchd 체크 주기를 3시간으로 변경
+# Change the launchd check interval to 3 hours
 ./venv/bin/python launchd_manager.py install --check-interval-hours 3
 
-# 등록 직후 launchd job을 한 번 깨움
+# Request one immediate launchd run after registration
 ./venv/bin/python launchd_manager.py install --run-now
 ```
 
-상태 확인과 관리는 아래 명령을 사용합니다.
+Useful management commands:
 
 ```bash
 ./venv/bin/python launchd_manager.py status
@@ -109,13 +120,13 @@ Telegram API 키는 https://my.telegram.org 의 `API development tools`에서 �
 ./venv/bin/python launchd_manager.py uninstall
 ```
 
-## 누락 방지 방식
+## Gap Prevention
 
-이 봇은 `config.state.json`에 마지막 성공 시각을 저장합니다. 다음 실행 때는 마지막 성공 시각보다 `runtime.state_overlap_minutes`만큼 앞에서 다시 수집합니다. 기본값은 360분입니다.
+The bot writes `config.state.json` next to `config.yaml` by default. It stores the last successful run time. On the next run, the bot fetches messages from slightly before that timestamp using `runtime.state_overlap_minutes`, which defaults to 360 minutes.
 
-Gemini 호출은 기본 5회 재시도합니다. `429`, `500`, `502`, `503`, `504`, `UNAVAILABLE`, `RESOURCE_EXHAUSTED` 계열 오류는 지수 백오프로 다시 시도합니다. 그래도 실패하면 상태 파일의 `last_success_utc`는 갱신하지 않습니다. 그래서 다음 launchd 체크 때 다시 같은 기간을 수집하고 요약을 재시도합니다.
+Gemini requests retry 5 times by default. Retryable errors include `429`, `500`, `502`, `503`, `504`, `UNAVAILABLE`, and `RESOURCE_EXHAUSTED`. If all retries fail, `last_success_utc` is not updated, so the next launchd check retries the same time window.
 
-실제 요약 간격은 `config.yaml`의 아래 값으로 조정합니다.
+The digest cadence is controlled in `config.yaml`:
 
 ```yaml
 runtime:
@@ -125,29 +136,29 @@ runtime:
 
 ## macOS Sleep
 
-Mac이 잠자기 상태이면 launchd job은 그 순간 실행되지 않습니다. `StartInterval`로 예약된 시간이 잠자는 동안 지나가면, 깨어난 뒤 실행 기회가 한 번 들어옵니다. 잠자는 동안 여러 번의 interval이 지나가도 밀린 횟수만큼 전부 실행되지는 않고 보통 한 번으로 합쳐집니다.
+This project does not force your Mac to wake from sleep. The generated plist uses `StartInterval`; it does not use wake-oriented settings such as `WakeToRun` or a persistent `KeepAlive` loop.
 
-그래서 이 프로젝트는 launchd 체크 주기를 실제 요약 주기보다 짧게 둡니다. Mac이 며칠 동안 잠들어 있었거나 네트워크/API 문제로 실패해도, 깨어난 뒤 다음 체크에서 마지막 성공 시각 기준으로 다시 수집합니다.
+If the Mac is asleep when a scheduled launchd interval passes, the job does not run at that exact time. After the Mac wakes, launchd usually gets another opportunity to run the job, but missed intervals are not replayed one by one. This is why the app stores the last successful run time and fetches based on state rather than trusting the wall-clock schedule alone.
 
-## 수동 실행
+## Manual Runs
 
 ```bash
-# 실행 주기가 되었을 때만 요약
+# Run only if the configured digest interval has elapsed
 ./venv/bin/python main.py
 
-# 실행 주기와 관계없이 바로 요약
+# Run immediately
 ./venv/bin/python main.py --force
 
-# 메시지 수집만 테스트
+# Fetch messages only
 ./venv/bin/python main.py --dry-run
 
-# 다른 설정 파일 또는 env 파일 사용
+# Use a custom config or env file
 ./venv/bin/python main.py --config /path/to/config.yaml --env-file /path/to/.env
 ```
 
-## GitHub에 올리지 않는 파일
+## Files Not Committed
 
-아래 파일은 개인 환경 또는 실행 산출물이라 `.gitignore`에 포함되어 있습니다.
+The following files are local-only and ignored by git:
 
 - `config.yaml`
 - `.env`
@@ -157,17 +168,16 @@ Mac이 잠자기 상태이면 launchd job은 그 순간 실행되지 않습니�
 - `*.plist`
 - `.DS_Store`
 
-## 파일 구조
+## Project Structure
 
 ```text
-tg_summary_bot/
-├── main.py                          # 진입점
-├── telegram_fetcher.py              # 메시지 수집
-├── summarizer.py                    # Gemini 요약
-├── file_writer.py                   # Obsidian 저장
-├── launchd_manager.py               # launchd 등록/관리 명령
-├── config.yaml.template             # 설정 템플릿
-├── .env.example                     # 환경변수 템플릿
-├── com.tgbot.summary.plist.template # plist 참고 템플릿
+telegram-summary-bot/
+├── main.py              # Entry point
+├── telegram_fetcher.py  # Telegram message collection
+├── summarizer.py        # Gemini summarization
+├── file_writer.py       # Obsidian Markdown output
+├── launchd_manager.py   # launchd install/status/uninstall helper
+├── config.example.yaml  # Example configuration
+├── .env.example         # Example environment variables
 └── requirements.txt
 ```
