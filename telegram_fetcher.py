@@ -28,12 +28,14 @@ async def fetch_messages(
     session_name: str,
     channels: list[str],
     since: datetime,
+    allow_partial_failures: bool = False,
 ) -> list[ChannelMessage]:
     """
     지정한 채널들에서 since 이후의 메시지를 수집해 반환합니다.
     최초 실행 시 터미널에서 전화번호 인증이 필요합니다.
     """
     messages: list[ChannelMessage] = []
+    failed_channels: list[str] = []
 
     async with TelegramClient(session_name, api_id, api_secret) as client:
         for channel in channels:
@@ -44,7 +46,14 @@ async def fetch_messages(
                 logger.info(f"  → {len(channel_messages)}개 메시지 수집")
             except Exception as e:
                 # 채널 하나 실패해도 전체를 멈추지 않음
+                failed_channels.append(channel)
                 logger.warning(f"  → 실패 ({channel}): {e}")
+
+    if failed_channels and (not allow_partial_failures or len(failed_channels) == len(channels)):
+        raise RuntimeError(f"채널 수집 실패: {', '.join(failed_channels)}")
+
+    if failed_channels:
+        logger.warning(f"일부 채널 수집 실패: {', '.join(failed_channels)}")
 
     # 날짜 오름차순 정렬
     messages.sort(key=lambda m: m.date)

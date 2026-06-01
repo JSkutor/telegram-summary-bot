@@ -4,8 +4,9 @@
 
 telegram:
   # my.telegram.org 에서 발급
-  api_id: "YOUR_TELEGRAM_API_ID"
-  api_secret: "YOUR_TELEGRAM_API_SECRET"
+  # ${...} 값은 .env 또는 셸 환경변수에서 읽습니다.
+  api_id: "${TELEGRAM_API_ID}"
+  api_secret: "${TELEGRAM_API_SECRET}"
   # 세션 파일 저장 경로 (처음 실행 시 인증 필요)
   session_name: "tg_summary_session"
 
@@ -16,11 +17,26 @@ telegram:
     # - "https://t.me/some_private_channel"
 
   # 가져올 기간 (일 단위 - launchd 주기와 맞출 것)
+  # 첫 실행 또는 상태 파일이 없을 때만 이 기간을 사용합니다.
   fetch_days: 3
 
+runtime:
+  # 실제 요약 생성 간격입니다. launchd는 더 자주 깨워서 실패 시 재시도합니다.
+  digest_interval_hours: 72
+  # 비워두면 config.yaml 옆에 config.state.json / config.lock 파일을 만듭니다.
+  state_file: ""
+  lock_file: ""
+  # 마지막 성공 시각보다 조금 앞에서 다시 가져와 누락을 방지합니다.
+  state_overlap_minutes: 360
+  # false이면 채널 하나라도 실패했을 때 성공 상태로 기록하지 않습니다.
+  allow_partial_channel_failures: false
+
 gemini:
-  api_key: "YOUR_GEMINI_API_KEY"
+  api_key: "${GEMINI_API_KEY}"
   model: "gemini-2.5-flash"
+  max_retries: 5
+  retry_initial_seconds: 60
+  retry_max_seconds: 900
 
   # 요약 프롬프트 (채널 성격에 맞게 수정)
   prompt_template: |

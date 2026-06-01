@@ -1,8 +1,13 @@
 config.yaml
+config.local.yaml
+*.state.json
+*.lock
 *.session
+*.session-journal
 venv/
 __pycache__/
 *.pyc
 .env
+*.log
 *.plist
 .DS_Store

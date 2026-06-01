@@ -4,12 +4,20 @@ Gemini API를 이용한 요약 모듈
 """
 
 import logging
+import time
 from datetime import datetime
 
 from google import genai
-from google.genai import types
 
 logger = logging.getLogger(__name__)
+
+
+RETRYABLE_MARKERS = ("429", "500", "502", "503", "504", "UNAVAILABLE", "RESOURCE_EXHAUSTED")
+
+
+def is_retryable_error(error: Exception) -> bool:
+    message = str(error).upper()
+    return any(marker in message for marker in RETRYABLE_MARKERS)
 
 
 def summarize(
@@ -19,12 +27,13 @@ def summarize(
     messages_text: str,
     date_from: datetime,
     date_to: datetime,
+    max_retries: int = 5,
+    retry_initial_seconds: float = 60,
+    retry_max_seconds: float = 900,
 ) -> str:
     """
     메시지 텍스트를 Gemini에 보내 요약된 마크다운 문서를 반환합니다.
     """
-    # genai.configure(api_key=api_key)
-    # model = genai.GenerativeModel(model_name)
     client = genai.Client(api_key=api_key)
 
     prompt = prompt_template.format(
@@ -36,19 +45,7 @@ def summarize(
 
     logger.info(f"Gemini 요약 요청 (모델: {model_name}, 입력 길이: {len(prompt)}자)")
 
-    # # response = model.generate_content(prompt)
-    # # result = response.text.strip()
-    # response = client.models.generate_content(
-    #     model=model_name,
-    #     contents=prompt,
-    # )
-    # result = response.text.strip()
-
-    # logger.info(f"요약 완료 (출력 길이: {len(result)}자)")
-    # return result
-
-    max_retries = 3
-    wait_seconds = 60
+    wait_seconds = retry_initial_seconds
 
     for attempt in range(1, max_retries + 1):
         try:
@@ -56,21 +53,24 @@ def summarize(
                 model=model_name,
                 contents=prompt,
             )
-            result = response.text.strip()
+            result = (response.text or "").strip()
+            if not result:
+                raise RuntimeError("Gemini 응답이 비어 있습니다.")
             logger.info(f"요약 완료 (출력 길이: {len(result)}자)")
             return result
 
         except Exception as e:
-            if "503" in str(e) and attempt < max_retries:
+            if is_retryable_error(e) and attempt < max_retries:
                 logger.warning(
-                    f"503 에러 - {wait_seconds}초 후 재시도 ({attempt}/{max_retries})"
+                    "Gemini 일시 오류 - "
+                    f"{wait_seconds:g}초 후 재시도 ({attempt}/{max_retries}): {e}"
                 )
-                import time
-
                 time.sleep(wait_seconds)
-                wait_seconds *= 2  # 60 → 120 → 240초로 늘어남
+                wait_seconds = min(wait_seconds * 2, retry_max_seconds)
             else:
                 raise
+
+    raise RuntimeError("Gemini 요약 재시도 횟수를 모두 소진했습니다.")
 
 
 def build_md_document(
